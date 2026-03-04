@@ -27,15 +27,32 @@ print_banner() {
     echo -e "${BLUE}==========================================${NC}"
 }
 
+# 授权并修复 Docker 权限问题
+fix_docker_permission() {
+    echo -e "${YELLOW}[*] 正在执行 Docker 授权...${NC}"
+    sudo usermod -aG docker $USER
+    echo -e "${GREEN}[OK] 已将用户 $USER 加入 docker 组。${NC}"
+    echo -e "${YELLOW}[!] 正在尝试通过 sg 命令立即刷新权限，如失败请手动执行 'newgrp docker'${NC}"
+    # 使用 sg 命令在当前 shell 环境中切换组权限并重新执行脚本
+    exec sg docker "$0"
+}
+
 # 安装必要系统依赖并配置 Docker 环境
 setup_environment() {
-    echo -e "${YELLOW}[!] 检查系统依赖...${NC}"
+    echo -e "${YELLOW}[1/3] 检查系统依赖...${NC}"
     sudo pacman -S --needed --noconfirm docker docker-compose android-tools git
     
+    echo -e "${YELLOW}[2/3] 启动 Docker 服务...${NC}"
     if ! systemctl is-active --quiet docker; then
         sudo systemctl enable --now docker
     fi
 
+    # 检查是否有访问 docker.sock 的权限
+    if ! [ -w /var/run/docker.sock ]; then
+        fix_docker_permission
+    fi
+
+    echo -e "${YELLOW}[3/3] 准备工作目录...${NC}"
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 
@@ -143,8 +160,9 @@ while true; do
     echo -e "3. ${BLUE}查看 运行日志${NC}"
     echo -e "4. 检查/下载 源码更新"
     echo -e "5. 重新构建 镜像"
-    echo -e "6. ${RED}完全卸载 ALAS${NC}"
-    echo -e "7. 退出"
+    echo -e "6. ${YELLOW}执行 Docker 权限授权${NC}"
+    echo -e "7. ${RED}完全卸载 ALAS${NC}"
+    echo -e "8. 退出"
     echo -e "------------------------------------------"
     
     # 状态检测逻辑
@@ -163,7 +181,7 @@ while true; do
     fi
     echo -e "------------------------------------------"
     
-    read -p "请输入选项 [1-7]: " choice
+    read -p "请输入选项 [1-8]: " choice
 
     case $choice in
         1)
@@ -193,9 +211,12 @@ while true; do
             read -p "按回车键继续..."
             ;;
         6)
-            uninstall_alas
+            fix_docker_permission
             ;;
         7)
+            uninstall_alas
+            ;;
+        8)
             exit 0
             ;;
         *)
