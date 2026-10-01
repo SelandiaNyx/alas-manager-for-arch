@@ -17,9 +17,11 @@
 在终端中执行以下命令即可下载并运行管理器：
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/SelandiaNyx/alas-manager-for-arch/main/alas-manager-for-arch.sh -o alas-manager-for-arch.sh
-chmod +x alas-manager-for-arch.sh
-./alas-manager-for-arch.sh
+curl --fail --show-error --location --proto '=https' --tlsv1.2 \
+    https://raw.githubusercontent.com/SelandiaNyx/alas-manager-for-arch/main/alas-manager-for-arch.sh \
+    --output alas-manager-for-arch.sh \
+    && chmod 0755 alas-manager-for-arch.sh \
+    && ./alas-manager-for-arch.sh
 
 ```
 
