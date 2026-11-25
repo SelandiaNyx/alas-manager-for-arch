@@ -38,8 +38,11 @@ chmod +x ~/ALAS/alas-manager.sh
 除交互式 TUI 外，还支持无交互子命令直达：
 
 ```bash
-~/ALAS/alas-manager.sh [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]
+~/ALAS/alas-manager.sh [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]
 ```
+
+
+> **桌面一键启动提示**：GNOME 文件管理器 (Nautilus 40+) 默认禁止双击直接运行 `.sh` 脚本（需右键选择「作为程序运行」）。运行一次 `~/ALAS/alas-manager.sh install-desktop` 即可生成桌面应用启动器，随后直接在系统应用菜单 / Fuzzel / Anyrun 中搜索 **ALAS** 一键启动！
 
 ## 🛠️ 使用前准备 (Prerequisites)
 

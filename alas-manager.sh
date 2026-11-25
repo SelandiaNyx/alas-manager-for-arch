@@ -214,7 +214,9 @@ load_i18n() {
             MSG[warn_rm_sudo]="部分文件因权限未能直接删除，请手动执行: sudo rm -rf \"%s\""
             MSG[ok_uninstalled]="已清理 ALAS 相关资源。"
             MSG[msg_cancelled]="已取消操作。"
-            MSG[usage_text]="用法: %s [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]"
+            MSG[ok_desktop_installed]="已创建桌面应用启动器: %s\n现在可在应用启动器 (Fuzzel/Anyrun/菜单) 中搜索「ALAS」一键打开！"
+            MSG[err_desktop_install]="创建桌面启动器失败: %s"
+            MSG[usage_text]="用法: %s [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]"
             ;;
         ja)
             MSG[app_title]="ALAS Docker マネージャー"
@@ -328,7 +330,9 @@ load_i18n() {
             MSG[warn_rm_sudo]="一部ファイルを削除できませんでした。手動で実行してください: sudo rm -rf \"%s\""
             MSG[ok_uninstalled]="ALAS 関連リソースを削除しました。"
             MSG[msg_cancelled]="キャンセルしました。"
-            MSG[usage_text]="使い方: %s [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]"
+            MSG[ok_desktop_installed]="デスクトップランチャーを作成しました: %s\nアプリランチャーで「ALAS」と検索して起動できます！"
+            MSG[err_desktop_install]="デスクトップランチャーの作成に失敗しました: %s"
+            MSG[usage_text]="使い方: %s [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]"
             ;;
         *)
             MSG[app_title]="ALAS Docker Manager"
@@ -442,7 +446,9 @@ load_i18n() {
             MSG[warn_rm_sudo]="Some files could not be deleted due to permissions. Run: sudo rm -rf \"%s\""
             MSG[ok_uninstalled]="ALAS resources cleaned up."
             MSG[msg_cancelled]="Operation cancelled."
-            MSG[usage_text]="Usage: %s [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]"
+            MSG[ok_desktop_installed]="Desktop launcher installed: %s\nSearch 'ALAS' in your app launcher to open with one click!"
+            MSG[err_desktop_install]="Failed to create desktop launcher: %s"
+            MSG[usage_text]="Usage: %s [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]"
             ;;
     esac
 }
@@ -615,11 +621,11 @@ http_download_to_file() {
 # =================================================================
 
 maybe_relaunch_in_terminal() {
-    # 仅在交互模式、非 TTY、非管道输入、且存在桌面环境时拉起新终端
+    # 仅在交互模式、非 TTY、非 dumb 终端且存在桌面环境时拉起新终端
     if [ "${ALAS_IN_TERMINAL:-0}" = "1" ] || [ "${ALAS_NO_TERM:-0}" = "1" ]; then
         return 0
     fi
-    if [ -t 0 ] || [ -t 1 ] || [ -p /dev/stdin ]; then
+    if [ -t 0 ] || [ -t 1 ] || [ "${TERM:-}" = "dumb" ]; then
         return 0
     fi
     if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ]; then
@@ -1371,6 +1377,43 @@ uninstall_alas() {
     log_ok "$(t ok_uninstalled)"
 }
 
+install_desktop_entry() {
+    local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    local desktop_file="${app_dir}/alas-manager.desktop"
+    local exec_cmd="$SCRIPT_PATH"
+    if [[ "$exec_cmd" == *" "* ]]; then
+        exec_cmd="\"$exec_cmd\""
+    fi
+
+    mkdir -p "$app_dir" || {
+        log_err "$(t err_desktop_install "$desktop_file")"
+        return 1
+    }
+
+    cat <<EOF > "$desktop_file"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ALAS Docker Manager
+Name[zh_CN]=ALAS 脚本管理器
+Name[ja]=ALAS Docker マネージャー
+Comment=AzurLaneAutoScript Docker TUI Manager
+Comment[zh_CN]=碧蓝航线 ALAS Docker 一键管理器
+Comment[ja]=AzurLaneAutoScript Docker TUI マネージャー
+Exec=${exec_cmd}
+Icon=utilities-terminal
+Terminal=false
+Categories=Utility;Game;
+StartupNotify=false
+EOF
+
+    chmod 0644 "$desktop_file"
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$app_dir" >/dev/null 2>&1 || true
+    fi
+    log_ok "$(t ok_desktop_installed "$desktop_file")"
+}
+
 # =================================================================
 # 7. 状态仪表盘采集（缓存至内存，保证 TUI 方向键 0 延迟）
 # =================================================================
@@ -1712,7 +1755,7 @@ main() {
             -h|--help)
                 cmd="help"
                 ;;
-            start|stop|restart|logs|update|rebuild|adb|status|uninstall)
+            start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall)
                 cmd="$1"
                 ;;
             *)
@@ -1741,8 +1784,9 @@ main() {
         update)    check_update; exit $? ;;
         rebuild)   build_image; exit $? ;;
         adb)       connect_waydroid_adb; exit $? ;;
-        status)    print_status_cli; exit 0 ;;
-        uninstall) uninstall_alas; exit $? ;;
+        status)          print_status_cli; exit 0 ;;
+        install-desktop) install_desktop_entry; exit $? ;;
+        uninstall)       uninstall_alas; exit $? ;;
     esac
 
     # 无子命令：如果是文件管理器双击启动（无 TTY），自动拉起终端窗口
