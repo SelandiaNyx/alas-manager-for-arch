@@ -621,11 +621,12 @@ http_download_to_file() {
 # =================================================================
 
 maybe_relaunch_in_terminal() {
-    # 仅在交互模式、非 TTY、非 dumb 终端且存在桌面环境时拉起新终端
+    # 仅在交互模式、非 TTY 且存在桌面环境时自动拉起终端窗口
+    # 注意：不能用 TERM=dumb 拦截，因为桌面启动器未设 TERM 时 Bash 会默认赋值 TERM=dumb
     if [ "${ALAS_IN_TERMINAL:-0}" = "1" ] || [ "${ALAS_NO_TERM:-0}" = "1" ]; then
         return 0
     fi
-    if [ -t 0 ] || [ -t 1 ] || [ "${TERM:-}" = "dumb" ]; then
+    if [ -t 0 ] || [ -t 1 ]; then
         return 0
     fi
     if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ]; then
