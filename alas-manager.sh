@@ -4,7 +4,6 @@
 # Version: 1.5.0
 # Description: 全系列 Linux 通用 Docker 版 AzurLaneAutoScript 管理工具
 #              支持自动检测系统语言、包管理器、初始化系统与下载工具
-#              支持终端直接运行或文件管理器双击运行
 # Author: SelandiaNyx
 # License: GPL-3.0
 # =================================================================
@@ -214,9 +213,7 @@ load_i18n() {
             MSG[warn_rm_sudo]="部分文件因权限未能直接删除，请手动执行: sudo rm -rf \"%s\""
             MSG[ok_uninstalled]="已清理 ALAS 相关资源。"
             MSG[msg_cancelled]="已取消操作。"
-            MSG[ok_desktop_installed]="已创建桌面应用启动器: %s\n现在可在应用启动器 (Fuzzel/Anyrun/菜单) 中搜索「ALAS」一键打开！"
-            MSG[err_desktop_install]="创建桌面启动器失败: %s"
-            MSG[usage_text]="用法: %s [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]"
+            MSG[usage_text]="用法: %s [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]"
             ;;
         ja)
             MSG[app_title]="ALAS Docker マネージャー"
@@ -330,9 +327,7 @@ load_i18n() {
             MSG[warn_rm_sudo]="一部ファイルを削除できませんでした。手動で実行してください: sudo rm -rf \"%s\""
             MSG[ok_uninstalled]="ALAS 関連リソースを削除しました。"
             MSG[msg_cancelled]="キャンセルしました。"
-            MSG[ok_desktop_installed]="デスクトップランチャーを作成しました: %s\nアプリランチャーで「ALAS」と検索して起動できます！"
-            MSG[err_desktop_install]="デスクトップランチャーの作成に失敗しました: %s"
-            MSG[usage_text]="使い方: %s [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]"
+            MSG[usage_text]="使い方: %s [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]"
             ;;
         *)
             MSG[app_title]="ALAS Docker Manager"
@@ -446,9 +441,7 @@ load_i18n() {
             MSG[warn_rm_sudo]="Some files could not be deleted due to permissions. Run: sudo rm -rf \"%s\""
             MSG[ok_uninstalled]="ALAS resources cleaned up."
             MSG[msg_cancelled]="Operation cancelled."
-            MSG[ok_desktop_installed]="Desktop launcher installed: %s\nSearch 'ALAS' in your app launcher to open with one click!"
-            MSG[err_desktop_install]="Failed to create desktop launcher: %s"
-            MSG[usage_text]="Usage: %s [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]"
+            MSG[usage_text]="Usage: %s [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]"
             ;;
     esac
 }
@@ -617,75 +610,7 @@ http_download_to_file() {
 }
 
 # =================================================================
-# 4. 单文件双击启动支持（非 TTY 桌面环境自动拉起终端窗口）
-# =================================================================
-
-maybe_relaunch_in_terminal() {
-    # 仅在交互模式、非 TTY 且存在桌面环境时自动拉起终端窗口
-    # 注意：不能用 TERM=dumb 拦截，因为桌面启动器未设 TERM 时 Bash 会默认赋值 TERM=dumb
-    if [ "${ALAS_IN_TERMINAL:-0}" = "1" ] || [ "${ALAS_NO_TERM:-0}" = "1" ]; then
-        return 0
-    fi
-    if [ -t 0 ] || [ -t 1 ]; then
-        return 0
-    fi
-    if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ]; then
-        return 0
-    fi
-
-    local title="ALAS Docker Manager"
-    local term_bin=""
-
-    # 优先尊重用户设置的 $TERMINAL
-    if [ -n "${TERMINAL:-}" ] && command -v "$TERMINAL" >/dev/null 2>&1; then
-        term_bin="$(basename "$TERMINAL")"
-        case "$term_bin" in
-            alacritty) exec env ALAS_IN_TERMINAL=1 "$TERMINAL" -T "$title" -e "$SCRIPT_PATH" "$@" ;;
-            kitty)     exec env ALAS_IN_TERMINAL=1 "$TERMINAL" --title "$title" "$SCRIPT_PATH" "$@" ;;
-            foot)      exec env ALAS_IN_TERMINAL=1 "$TERMINAL" -T "$title" "$SCRIPT_PATH" "$@" ;;
-            wezterm)   exec env ALAS_IN_TERMINAL=1 "$TERMINAL" start -- "$SCRIPT_PATH" "$@" ;;
-            gnome-terminal) exec env ALAS_IN_TERMINAL=1 "$TERMINAL" --title="$title" -- "$SCRIPT_PATH" "$@" ;;
-            xfce4-terminal|mate-terminal|terminator)
-                exec env ALAS_IN_TERMINAL=1 "$TERMINAL" -x "$SCRIPT_PATH" "$@" ;;
-            *)         exec env ALAS_IN_TERMINAL=1 "$TERMINAL" -e "$SCRIPT_PATH" "$@" ;;
-        esac
-    fi
-
-    if command -v alacritty >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 alacritty -T "$title" -e "$SCRIPT_PATH" "$@"
-    elif command -v kitty >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 kitty --title "$title" "$SCRIPT_PATH" "$@"
-    elif command -v foot >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 foot -T "$title" "$SCRIPT_PATH" "$@"
-    elif command -v wezterm >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 wezterm start -- "$SCRIPT_PATH" "$@"
-    elif command -v ghostty >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 ghostty -e "$SCRIPT_PATH" "$@"
-    elif command -v konsole >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 konsole -e "$SCRIPT_PATH" "$@"
-    elif command -v gnome-terminal >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 gnome-terminal --title="$title" -- "$SCRIPT_PATH" "$@"
-    elif command -v xfce4-terminal >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 xfce4-terminal --title="$title" -x "$SCRIPT_PATH" "$@"
-    elif command -v mate-terminal >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 mate-terminal --title="$title" -x "$SCRIPT_PATH" "$@"
-    elif command -v tilix >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 tilix -e "$SCRIPT_PATH"
-    elif command -v terminator >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 terminator -x "$SCRIPT_PATH" "$@"
-    elif command -v lxterminal >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 lxterminal -e "$SCRIPT_PATH"
-    elif command -v urxvt >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 urxvt -title "$title" -e "$SCRIPT_PATH" "$@"
-    elif command -v x-terminal-emulator >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 x-terminal-emulator -e "$SCRIPT_PATH"
-    elif command -v xterm >/dev/null 2>&1; then
-        exec env ALAS_IN_TERMINAL=1 xterm -T "$title" -e "$SCRIPT_PATH" "$@"
-    fi
-}
-
-# =================================================================
-# 5. Docker / Compose / 系统依赖自动适配安装
+# 4. Docker / Compose / 系统依赖自动适配安装
 # =================================================================
 
 has_compose() {
@@ -1378,43 +1303,6 @@ uninstall_alas() {
     log_ok "$(t ok_uninstalled)"
 }
 
-install_desktop_entry() {
-    local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-    local desktop_file="${app_dir}/alas-manager.desktop"
-    local exec_cmd="$SCRIPT_PATH"
-    if [[ "$exec_cmd" == *" "* ]]; then
-        exec_cmd="\"$exec_cmd\""
-    fi
-
-    mkdir -p "$app_dir" || {
-        log_err "$(t err_desktop_install "$desktop_file")"
-        return 1
-    }
-
-    cat <<EOF > "$desktop_file"
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=ALAS Docker Manager
-Name[zh_CN]=ALAS 脚本管理器
-Name[ja]=ALAS Docker マネージャー
-Comment=AzurLaneAutoScript Docker TUI Manager
-Comment[zh_CN]=碧蓝航线 ALAS Docker 一键管理器
-Comment[ja]=AzurLaneAutoScript Docker TUI マネージャー
-Exec=${exec_cmd}
-Icon=utilities-terminal
-Terminal=false
-Categories=Utility;Game;
-StartupNotify=false
-EOF
-
-    chmod 0644 "$desktop_file"
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$app_dir" >/dev/null 2>&1 || true
-    fi
-    log_ok "$(t ok_desktop_installed "$desktop_file")"
-}
-
 # =================================================================
 # 7. 状态仪表盘采集（缓存至内存，保证 TUI 方向键 0 延迟）
 # =================================================================
@@ -1739,7 +1627,6 @@ run_fallback_menu() {
 main() {
     local cmd=""
     local cli_lang=""
-    local orig_args=("$@")
 
     while (( $# > 0 )); do
         case "$1" in
@@ -1750,13 +1637,10 @@ main() {
             --lang=*)
                 cli_lang="${1#*=}"
                 ;;
-            --no-relaunch)
-                ALAS_NO_TERM=1
-                ;;
             -h|--help)
                 cmd="help"
                 ;;
-            start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall)
+            start|stop|restart|logs|update|rebuild|adb|status|uninstall)
                 cmd="$1"
                 ;;
             *)
@@ -1785,13 +1669,9 @@ main() {
         update)    check_update; exit $? ;;
         rebuild)   build_image; exit $? ;;
         adb)       connect_waydroid_adb; exit $? ;;
-        status)          print_status_cli; exit 0 ;;
-        install-desktop) install_desktop_entry; exit $? ;;
-        uninstall)       uninstall_alas; exit $? ;;
+        status)    print_status_cli; exit 0 ;;
+        uninstall) uninstall_alas; exit $? ;;
     esac
-
-    # 无子命令：如果是文件管理器双击启动（无 TTY），自动拉起终端窗口
-    maybe_relaunch_in_terminal ${orig_args[@]+"${orig_args[@]}"}
 
     if [ -t 0 ] && [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
         run_interactive_tui

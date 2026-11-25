@@ -4,7 +4,7 @@
 
 ## 🌟 功能特性 (Features)
 
-* **单文件零依赖 TUI**：纯 Bash ANSI 交互界面，支持方向键 `↑/↓`（`j/k`）、数字快捷键 `0-9`、实时状态仪表盘；支持在终端直接运行，也支持在桌面文件管理器中**双击自动拉起终端窗口运行**。
+* **单文件零依赖 TUI**：纯 Bash ANSI 交互界面，支持方向键 `↑/↓`（`j/k`）、数字快捷键 `0-9`、实时状态仪表盘；无额外 TUI 依赖，在终端中直接运行即可使用。
 * **多语言自动适配 (i18n)**：自动检测系统语言环境并在 **简体中文 / English / 日本語** 间切换，TUI 内按 `L` 可随时切换并记住偏好，同时自动同步 ALAS WebUI 默认语言。
 * **全系列 Linux 自动适配**：
   * **包管理器**：自动识别 `pacman` (Arch 系)、`apt` (Debian/Ubuntu 系)、`dnf`/`yum` (Fedora/RHEL 系，缺失 Docker 源时自动回退官方脚本)、`zypper` (openSUSE)、`apk` (Alpine)、`xbps-install` (Void)、`emerge` (Gentoo)，并对 NixOS 与 `rpm-ostree` 不可变系统提供指引。
@@ -15,7 +15,7 @@
 
 ## 🚀 快速开始 (Quick Start)
 
-在终端中下载单文件脚本并运行（也可在文件管理器中直接双击 `alas-manager.sh` 运行）：
+在终端中下载单文件脚本并运行：
 
 ```bash
 mkdir -p ~/ALAS
@@ -38,11 +38,8 @@ chmod +x ~/ALAS/alas-manager.sh
 除交互式 TUI 外，还支持无交互子命令直达：
 
 ```bash
-~/ALAS/alas-manager.sh [start|stop|restart|logs|update|rebuild|adb|status|install-desktop|uninstall] [--lang zh|en|ja]
+~/ALAS/alas-manager.sh [start|stop|restart|logs|update|rebuild|adb|status|uninstall] [--lang zh|en|ja]
 ```
-
-
-> **桌面一键启动提示**：GNOME 文件管理器 (Nautilus 40+) 默认禁止双击直接运行 `.sh` 脚本（需右键选择「作为程序运行」）。运行一次 `~/ALAS/alas-manager.sh install-desktop` 即可生成桌面应用启动器，随后直接在系统应用菜单 / Fuzzel / Anyrun 中搜索 **ALAS** 一键启动！
 
 ## 🛠️ 使用前准备 (Prerequisites)
 
